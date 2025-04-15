@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Journal - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="flex items-center justify-center min-h-screen bg-[url('background.png')] bg-cover bg-center bg-no-repeat">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center">
+        <img src="logo.png" alt="Logo" class="w-24 h-24 mx-auto mb-4 rounded-full shadow-md" />
+        <h2 class="text-3xl font-bold mb-6">Smart Journal</h2>
+        <p class="text-sm mb-6 text-gray-600 italic">Your voice, your thoughts — effortlessly recorded.</p>
+
+        <div class="mb-4 text-left">
+            <input id="email" type="email" placeholder="Email" class="w-full p-2 border rounded" />
+        </div>
+        <div class="mb-4 text-left">
+            <input id="password" type="password" placeholder="Password" class="w-full p-2 border rounded" />
+        </div>
+
+        <div class="flex justify-center space-x-4 mb-4">
+            <button onclick="login()"
+                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Login</button>
+        </div>
+
+        <!-- Added sample credentials -->
+        <div class="mb-4 text-sm text-gray-500 italic">
+            Sample credentials for testing and viewing:<br>
+            Email: example@gmail.com<br>
+            Password: Password@123
+        </div>
+
+        <p class="text-sm">
+            Don't have an account?
+            <a href="signup.html" class="text-blue-500 hover:underline">Sign up</a>
+        </p>
+
+        <p id="message" class="text-sm mt-4 text-red-500"></p>
+    </div>
+
+    <script>
+        const API = "http://localhost:5000/api";
+
+        async function login() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            const res = await fetch(`${API}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await res.json();
+            if (data.userId) {
+                localStorage.setItem("userId", data.userId);
+                window.location.href = "journal.html";
+            } else {
+                document.getElementById("message").innerText = data.error;
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journal Entries</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+    <style>
+        .sidebar {
+            background: linear-gradient(180deg, #4f46e5 0%, #6366f1 100%);
+            width: 280px;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+
+        .sidebar-open .sidebar {
+            transform: translateX(0);
+        }
+
+        .menu-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .profile-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .profile-image {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sign-out-btn {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .profile-container:hover .sign-out-btn,
+        .profile-container.active .sign-out-btn {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 min-h-screen">
+    <!-- Profile Icon -->
+    <div class="profile-container" onclick="toggleSignOut()" onmouseover="showSignOut()" onmouseout="hideSignOut()">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Profile" class="profile-image">
+        <button id="signOutBtn" class="sign-out-btn" onclick="signOut()">Sign Out</button>
+    </div>
+
+    <!-- Hamburger Menu -->
+    <button class="menu-btn p-3 bg-purple-600 rounded-full shadow-lg text-white" onclick="toggleSidebar()">☰</button>
+
+    <!-- Sidebar -->
+    <div class="sidebar fixed h-screen p-6 flex flex-col space-y-4 text-white">
+        <h2 class="text-2xl font-bold mb-8 mt-4 text-center">Journal Menu</h2>
+        <button onclick="window.location.href='new-entry.html'"
+            class="w-full p-4 bg-purple-400 hover:bg-purple-500 text-white rounded-xl transition-all flex items-center justify-center space-x-2 shadow-md">
+            <span class="text-2xl">➕</span>
+            <span>Add New Journal</span>
+        </button>
+        <button onclick="window.location.href='journal.html'"
+            class="w-full p-4 bg-indigo-400 hover:bg-indigo-500 text-white rounded-xl transition-all flex items-center justify-center space-x-2 shadow-md">
+            <span class="text-2xl">📖</span>
+            <span>View Journals</span>
+        </button>
+        <button onclick="logout()"
+            class="w-full p-4 bg-red-300 hover:bg-red-400 text-white rounded-xl transition-all flex items-center justify-center space-x-2 shadow-md mt-auto">
+            <span class="text-2xl">⭕</span>
+            <span>Logout</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto mb-6 text-center">
+        <h2 id="welcomeMessage" class="text-2xl font-semibold text-purple-700"></h2>
+    </div>
+
+    <div class="pt-20 px-8 transition-all duration-300">
+        <h1 class="text-4xl font-extrabold text-purple-800 mb-8 text-center">Your Journal Entries</h1>
+
+        <!-- Buttons -->
+        <div class="flex justify-center gap-4 mb-6">
+            <button onclick="window.location.href='new-entry.html'"
+                class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl shadow">
+                + Add New Entry
+            </button>
+            <button onclick="exportToPDF()" class="bg-green-600 hover:bg-green-700 text-white p-3 rounded-xl shadow">
+                📄 Download PDF of my Journal Entries
+            </button>
+        </div>
+
+        <!-- Search and Sort -->
+        <div class="flex justify-between items-center mb-6 max-w-4xl mx-auto">
+            <input type="text" id="searchInput" placeholder="Search entries..."
+                class="p-2 border-2 border-purple-300 rounded-lg w-64 focus:outline-none focus:border-purple-500">
+            <select id="sortSelect"
+                class="p-2 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-500">
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+            </select>
+        </div>
+
+        <!-- Journal Entries -->
+        <div id="entries" class="space-y-4 max-w-4xl mx-auto"></div>
+    </div>
+
+    <!-- Hidden PDF Container -->
+    <div id="pdfContent" class="hidden"></div>
+
+    <script>
+        const API = "http://localhost:5000/api";
+        const userId = localStorage.getItem("userId");
+        const entries = document.getElementById("entries");
+        const searchInput = document.getElementById("searchInput");
+        const sortSelect = document.getElementById("sortSelect");
+
+        if (!userId) window.location.href = "index.html";
+
+        let allEntries = [];
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        async function fetchEntries() {
+            const res = await fetch(`${API}/journals/${userId}`);
+            const data = await res.json();
+            allEntries = data.reverse(); // default to newest
+            renderEntries();
+        }
+
+        function renderEntries() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const sortOrder = sortSelect.value;
+            const filtered = allEntries
+                .filter(e => e.content.toLowerCase().includes(searchTerm))
+                .sort((a, b) => sortOrder === "desc" ? new Date(b.createdAt) - new Date(a.createdAt) : new Date(a.createdAt) - new Date(b.createdAt));
+
+            entries.innerHTML = "";
+            const pdfContent = document.getElementById("pdfContent");
+            pdfContent.innerHTML = "";
+
+            if (!filtered.length) {
+                entries.innerHTML = "<p class='text-gray-700'>No entries found.</p>";
+                return;
+            }
+
+            filtered.forEach(entry => {
+                const html = `
+                    <div class="p-4 bg-white rounded-xl shadow flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-800">
+                                <span class="text-sm text-gray-500">${new Date(entry.createdAt).toLocaleString()}</span><br>
+                                <span class="entry-content">${escapeHtml(entry.content)}</span>
+                            </p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="editEntry('${entry._id}', this)" class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded">Edit</button>
+                            <button onclick="deleteEntry('${entry._id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">Delete</button>
+                        </div>
+                    </div>`;
+
+                const div = document.createElement("div");
+                div.innerHTML = html;
+                entries.appendChild(div);
+
+                const cleanEntry = `
+                    <div style="margin-bottom: 1em;">
+                        <p><strong>${new Date(entry.createdAt).toLocaleString()}</strong></p>
+                        <p>${escapeHtml(entry.content)}</p>
+                    </div>`;
+                pdfContent.innerHTML += cleanEntry;
+            });
+        }
+
+        function editEntry(id, button) {
+            const card = button.closest('.p-4.bg-white.rounded-xl.shadow');
+            const content = card.querySelector('.entry-content').textContent;
+            card.innerHTML = `
+                <textarea class="w-full p-2 border-2 border-purple-300 rounded-lg mb-2">${content}</textarea>
+                <div class="flex space-x-2">
+                    <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">OK</button>
+                    <button class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded">Cancel</button>
+                </div>`;
+
+            card.querySelector('.bg-green-500').onclick = async () => {
+                const newContent = card.querySelector('textarea').value.trim();
+                if (!newContent) return alert("Content cannot be empty");
+                await fetch(`${API}/journals/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ content: newContent })
+                });
+                fetchEntries();
+            };
+
+            card.querySelector('.bg-gray-500').onclick = () => fetchEntries();
+        }
+
+        async function deleteEntry(id) {
+            await fetch(`${API}/journals/${id}`, { method: "DELETE" });
+            fetchEntries();
+        }
+
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-open');
+        }
+        function signOut() {
+                localStorage.removeItem("userId");
+                window.location.replace("index.html");
+        }
+        function logout() {
+            localStorage.removeItem("userId");
+            window.location.replace("index.html");
+        }
+
+        function toggleSignOut() {
+            document.querySelector('.profile-container').classList.toggle('active');
+        }
+
+        function showSignOut() {
+            document.querySelector('.profile-container').classList.add('active');
+        }
+
+        function hideSignOut() {
+            document.querySelector('.profile-container').classList.remove('active');
+        }
+
+        function exportToPDF() {
+                const pdfContainer = document.getElementById("pdfContent");
+
+                // Clone the node so it's independent of visibility settings
+                const clone = pdfContainer.cloneNode(true);
+                clone.style.display = 'block'; // Ensure it's visible for rendering
+
+                const opt = {
+                    margin: 0.5,
+                    filename: 'journal_entries.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(clone).save();
+        }
+
+        searchInput.addEventListener('input', renderEntries);
+        sortSelect.addEventListener('change', renderEntries);
+
+        fetchEntries();
+    </script>
+</body>
+
+</html>

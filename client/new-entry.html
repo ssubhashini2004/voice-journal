@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Journal Entry</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            background: linear-gradient(180deg, #4f46e5 0%, #6366f1 100%);
+            width: 280px;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+
+        .sidebar-open .sidebar {
+            transform: translateX(0);
+        }
+
+        .menu-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .profile-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .profile-image {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sign-out-btn {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .profile-container:hover .sign-out-btn,
+        .profile-container.active .sign-out-btn {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 min-h-screen">
+    <!-- Profile Icon -->
+    <div class="profile-container" onclick="toggleSignOut()" onmouseover="showSignOut()" onmouseout="hideSignOut()">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Profile" class="profile-image">
+        <button id="signOutBtn" class="sign-out-btn" onclick="signOut()">Sign Out</button>
+    </div>
+
+    <!-- Hamburger Menu -->
+    <button class="menu-btn p-3 bg-purple-600 rounded-full shadow-lg text-white" onclick="toggleSidebar()">
+        ☰
+    </button>
+
+    <!-- Sidebar -->
+    <div class="sidebar fixed h-screen p-6 flex flex-col space-y-4 text-white">
+        <h2 class="text-2xl font-bold mb-8 mt-4 text-center">Journal Menu</h2>
+        <button onclick="window.location.href='new-entry.html'" class="w-full p-4 bg-purple-400 hover:bg-purple-500 text-white rounded-xl transition-all 
+                       flex items-center justify-center space-x-2 shadow-md">
+            <span class="text-2xl">➕</span>
+            <span>Add New Journal</span>
+        </button>
+        <button onclick="window.location.href='journal.html'" class="w-full p-4 bg-indigo-400 hover:bg-indigo-500 text-white rounded-xl transition-all 
+                       flex items-center justify-center space-x-2 shadow-md">
+            <span class="text-2xl">📖</span>
+            <span>View Journals</span>
+        </button>
+        <button onclick="logout()" class="w-full p-4 bg-red-300 hover:bg-red-400 text-white rounded-xl transition-all 
+                       flex items-center justify-center space-x-2 shadow-md mt-auto">
+            <span class="text-2xl">⭕</span>
+            <span>Logout</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="pt-20 px-8 max-w-3xl mx-auto transition-all duration-300">
+        <h1 class="text-4xl font-extrabold text-purple-800 mb-8 text-center">New Journal Entry</h1>
+
+        <!-- Journal Entry Area -->
+        <div class="mb-6">
+            <textarea id="entry" rows="8"
+                class="w-full p-4 border-2 border-purple-300 rounded-xl shadow-lg focus:outline-none focus:border-purple-500"
+                placeholder="Start speaking..." disabled></textarea>
+        </div>
+
+        <div class="flex justify-between gap-4 mb-6">
+            <button id="recordBtn" class="bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-xl shadow-lg 
+                           flex-1 transition-colors text-lg">
+                🎤 Start Recording
+            </button>
+            <button onclick="saveJournal()" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl shadow-lg 
+                           flex-1 transition-colors text-lg">
+                💾 Save Entry
+            </button>
+            <button onclick="discardJournal()" class="bg-red-300 hover:bg-red-600 text-white p-4 rounded-xl shadow-lg 
+                           flex-1 transition-colors text-lg">
+                ❌ Discard
+            </button>
+        </div>
+
+        <!-- View All Entries Button -->
+        <div class="w-full mb-6">
+            <button onclick="window.location.href='journal.html'"
+                class="w-full bg-indigo-500 hover:bg-indigo-600 text-white p-4 rounded-xl shadow-lg transition-colors text-lg">
+                📚 View All Entries
+            </button>
+        </div>
+
+        <p id="message" class="text-center text-lg font-semibold text-gray-700 mt-4"></p>
+    </div>
+
+    <script>
+        // Profile and Sign Out Functions
+        function toggleSignOut() {
+            document.querySelector('.profile-container').classList.toggle('active');
+        }
+
+        function showSignOut() {
+            document.querySelector('.profile-container').classList.add('active');
+        }
+
+        function hideSignOut() {
+            if (!document.querySelector('.profile-container').classList.contains('active')) {
+                document.querySelector('.profile-container').classList.remove('active');
+            }
+        }
+
+        function signOut() {
+            localStorage.removeItem("userId");
+            window.location.replace("index.html");
+        }
+
+        // Existing Functions
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-open');
+        }
+
+        document.addEventListener('click', (event) => {
+            const sidebar = document.querySelector('.sidebar');
+            const menuBtn = document.querySelector('.menu-btn');
+            if (!sidebar.contains(event.target) && event.target !== menuBtn) {
+                document.body.classList.remove('sidebar-open');
+            }
+        });
+
+        const API = "http://localhost:5000/api";
+        const userId = localStorage.getItem("userId");
+
+        if (!userId) window.location.href = "index.html";
+
+        const entry = document.getElementById("entry");
+        const message = document.getElementById("message");
+        const recordBtn = document.getElementById("recordBtn");
+
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.continuous = true;
+
+        let isRecording = false;
+
+        function logout() {
+            localStorage.removeItem("userId");
+            window.location.replace("index.html");
+        }
+
+        function toggleRecording() {
+            if (isRecording) {
+                recognition.stop();
+                recordBtn.textContent = "🎤 Start Recording";
+                entry.disabled = false;
+            } else {
+                recognition.start();
+                recordBtn.textContent = "🛑 Stop Recording";
+                entry.disabled = true;
+            }
+            isRecording = !isRecording;
+        }
+
+        recordBtn.addEventListener("click", toggleRecording);
+
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    transcript = event.results[i][0].transcript;
+                    entry.value += transcript + " ";
+                }
+            }
+        };
+
+        recognition.onerror = (event) => {
+            message.innerText = "Error: " + event.error;
+        };
+
+        async function saveJournal() {
+            const content = entry.value.trim();
+            if (!content) return alert("Please add some content.");
+
+            const res = await fetch(`${API}/journals/add`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, content }),
+            });
+
+            const data = await res.json();
+            message.innerText = data.message || data.error;
+            entry.value = "";
+        }
+
+        function discardJournal() {
+            entry.value = "";
+            entry.disabled = false;
+        }
+    </script>
+</body>
+
+</html>
