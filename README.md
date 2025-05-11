@@ -135,9 +135,8 @@ User Authentication
 
 Sign up via frontend ➔ Backend creates JWT ➔ MongoDB stores encrypted credentials
 
-## Voice Journaling
+## Voice Journaling - Architecture
 
-**Diagram**
 ![image](https://github.com/user-attachments/assets/59dedf3a-f6c6-48f9-bddc-9c0ef3e9e1ec)
 
 
